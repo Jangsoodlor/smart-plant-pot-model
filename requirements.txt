@@ -1,11 +1,7 @@
-# Interactive Python Notebook stuffs.
+# ipynb support
 ipykernel
 nbformat
-# Model trianing libraries.
-pandas
-scikit-learn
-# Graphing libraries.
+# model training
+statsmodels
+# graphs
 matplotlib
-seaborn
-plotly
-plotly[express]
