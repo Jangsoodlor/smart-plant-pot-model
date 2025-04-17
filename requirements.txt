@@ -3,5 +3,7 @@ ipykernel
 nbformat
 # model training
 statsmodels
+pmdarima
+numpy==1.26.4
 # graphs
 matplotlib
