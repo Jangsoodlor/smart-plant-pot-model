@@ -1,9 +1,12 @@
-# ipynb support
-ipykernel
-nbformat
-# model training
-statsmodels
-pmdarima
-numpy==1.26.4
-# graphs
-matplotlib
+ipykernel==6.29.2 
+ipython==8.21.0 
+matplotlib==3.8.3 
+matplotlib-inline==0.1.6 
+nbformat==5.10.4 
+numpy==1.26.4 
+pandas==2.2.2 
+pmdarima==2.0.4 
+scikit-learn==1.6.1 
+scipy==1.15.1 
+seaborn==0.13.2 
+statsmodels==0.14.4
