@@ -139,22 +139,21 @@ class Model:
 
         return predicted, upper, lower
 
-    def get_duration(self) -> str:
-        """Returns either the duration (or the exact date and time up 2 you)"""
+    def get_duration(self, moisture_level) -> str:
+        """Returns either the duration based on moisture level (or the exact date and time up 2 you)"""
         # TODO: implement
         return "3000 days"
+
 
 if __name__ == "__main__":
     df = pd.read_csv("dataset.csv", index_col="ts", parse_dates=True)
     builder = ModelBuilder()
     builder.add_basic_init(df, "soil_moisture", (2, 0, 1), pd.Timedelta(minutes=15))
 
-    model = (
-        builder.add_exog("temperature", (2, 0, 1), (1, 0, 1, 24))
-        .add_exog("humidity", (2, 0, 1), (1, 0, 1, 24))
-        .build()
-    )
-    prediction, upper, lower = model.fit_model().get_prediction(1240)
+    builder.add_exog("temperature", (2, 0, 1), (1, 0, 1, 24)).add_exog(
+        "humidity", (2, 0, 1), (1, 0, 1, 24)
+    ).build()
+    prediction, upper, lower = ModelManager.get_model().fit_model().get_prediction(1240)
 
     fig = go.Figure()
 
