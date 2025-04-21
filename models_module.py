@@ -4,29 +4,28 @@ from statsmodels.tsa.statespace.sarimax import SARIMAX
 
 
 class ModelManager:
-    def __init__(
-        self,
-        dataframe: pd.DataFrame,
-        predicting_column: str,
-        order: tuple[int, int, int],
-        time_delta: pd.Timedelta,
-    ):
-        """
-        Init the model
-        :param dataframe: The dataframe containing all the columns
-        :param predicting_column: The name of the predicting column
-        :param exog_columns: The list of exog columns.
-        :param order: The order of ARIMAX model
-        """
-        self.__main_data = dataframe
-        self.__predicting_column = predicting_column
-        self.__exog_models = []
-        self.__exog_columns = []
-        self.__exog_training_values = None
-        self.__exog_predicting_values = None
-        self.__order = order
-        self.__model = None
-        self.__timedelta = time_delta
+    __instance = None
+
+    @classmethod
+    def get_model(cls):
+        return cls.__instance
+
+    @classmethod
+    def set_model(cls, instance):
+        cls.__instance = instance
+
+
+class ModelBuilder:
+    def __init__(self):
+        self.main_data = None
+        self.exog_models = []
+        self.exog_columns = []
+        self.predicting_column = None
+        self.exog_training_values = None
+        self.exog_predicting_values = None
+        self.order = None
+        self.model = None
+        self.timedelta = None
 
     def add_exog(
         self,
@@ -34,14 +33,52 @@ class ModelManager:
         order: tuple[int, int, int],
         seasonal_order: tuple[int, int, int, int],
     ):
-        self.__exog_columns.append(column_name)
+        self.exog_columns.append(column_name)
         model = SARIMAX(
-            endog=self.__main_data[column_name],
+            endog=self.main_data[column_name],
             order=order,
             seasonal_order=seasonal_order,
         )
-        self.__exog_models.append({"name": column_name, "model": model.fit()})
+        self.exog_models.append({"name": column_name, "model": model.fit()})
         return self
+
+    def add_basic_init(
+        self,
+        dataframe: pd.DataFrame,
+        predicting_column: str,
+        order: tuple[int, int, int],
+        time_delta: pd.Timedelta,
+    ):
+        self.main_data = dataframe
+        self.predicting_column = predicting_column
+        self.order = order
+        self.timedelta = time_delta
+        return self
+
+    def build(self):
+        model = Model(self)
+        ModelManager.set_model(model)
+        return model
+
+
+class Model:
+    def __init__(self, builder: ModelBuilder):
+        """
+        Init the model
+        :param dataframe: The dataframe containing all the columns
+        :param predicting_column: The name of the predicting column
+        :param exog_columns: The list of exog columns.
+        :param order: The order of ARIMAX model
+        """
+        self.__main_data = builder.main_data
+        self.__predicting_column = builder.predicting_column
+        self.__exog_models = builder.exog_models
+        self.__exog_columns = builder.exog_columns
+        self.__exog_training_values = builder.exog_training_values
+        self.__exog_predicting_values = builder.exog_predicting_values
+        self.__order = builder.order
+        self.__model = builder.model
+        self.__timedelta = builder.timedelta
 
     def __get_exog_data(self, steps: int):
         for model in self.__exog_models:
@@ -93,22 +130,17 @@ class ModelManager:
 
         return predicted, upper, lower
 
-    def __new__(cls):
-        """Singleton __new__ constructor"""
-        if cls.__instance is None:
-            cls.__instance = super().__new__(cls)
-        return cls.__instance
-
 
 if __name__ == "__main__":
     df = pd.read_csv("dataset.csv", index_col="ts", parse_dates=True)
-    print(df.columns)
-    model_manager = ModelManager(
+    builder = ModelBuilder()
+    model_manager = builder.add_basic_init(
         df, "soil_moisture", (2, 0, 1), pd.Timedelta(minutes=15)
     )
     prediction, upper, lower = (
-        model_manager.add_exog("temperature", (2, 0, 1), (1, 0, 1, 24))
+        builder.add_exog("temperature", (2, 0, 1), (1, 0, 1, 24))
         .add_exog("humidity", (2, 0, 1), (1, 0, 1, 24))
+        .build()
         .fit_model()
         .get_prediction(1240)
     )
