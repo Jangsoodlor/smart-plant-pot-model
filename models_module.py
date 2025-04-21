@@ -1,5 +1,5 @@
 import pandas as pd
-import matplotlib.pyplot as plt
+import plotly.graph_objects as go
 from statsmodels.tsa.statespace.sarimax import SARIMAX
 
 
@@ -134,30 +134,46 @@ class Model:
 if __name__ == "__main__":
     df = pd.read_csv("dataset.csv", index_col="ts", parse_dates=True)
     builder = ModelBuilder()
-    model_manager = builder.add_basic_init(
-        df, "soil_moisture", (2, 0, 1), pd.Timedelta(minutes=15)
-    )
-    prediction, upper, lower = (
+    builder.add_basic_init(df, "soil_moisture", (2, 0, 1), pd.Timedelta(minutes=15))
+
+    model = (
         builder.add_exog("temperature", (2, 0, 1), (1, 0, 1, 24))
         .add_exog("humidity", (2, 0, 1), (1, 0, 1, 24))
         .build()
-        .fit_model()
-        .get_prediction(1240)
     )
-    plt.figure(figsize=(12, 6))
-    # Ensure datetime index and proper plotting
-    plt.plot(df.index, df["soil_moisture"], label="data")
-    print(df.index, df["soil_moisture"])
-    print("-----------------------------------")
-    print(prediction.index, prediction)
-    plt.plot(
-        prediction.index, prediction, label="Predicted"
-    )  # use the same x-axis as test
-    plt.fill_between(prediction.index, lower, upper, color="pink", alpha=0.3)
-    plt.legend()
-    plt.xlabel("Date")
-    plt.ylabel("Soil Moisture")
-    plt.title("Soil Moisture: Training, Test and Predictions")
-    plt.grid(True)
-    plt.tight_layout()
-    plt.show()
+    prediction, upper, lower = model.fit_model().get_prediction(1240)
+
+    fig = go.Figure()
+
+    # Line for actual data
+    fig.add_trace(
+        go.Scatter(x=df.index, y=df["soil_moisture"], mode="lines", name="data")
+    )
+
+    # Line for predicted data
+    fig.add_trace(
+        go.Scatter(x=prediction.index, y=prediction, mode="lines", name="Predicted")
+    )
+
+    # Fill between lower and upper prediction intervals
+    fig.add_trace(
+        go.Scatter(
+            x=prediction.index.tolist() + prediction.index[::-1].tolist(),
+            y=upper.tolist() + lower[::-1].tolist(),
+            fill="toself",
+            fillcolor="rgba(255, 192, 203, 0.3)",  # pink with alpha 0.3
+            line=dict(color="rgba(255,255,255,0)"),
+            hoverinfo="skip",
+            name="Confidence Interval",
+        )
+    )
+
+    fig.update_layout(
+        title="Soil Moisture: Training, Test and Predictions",
+        xaxis_title="Date",
+        yaxis_title="Soil Moisture",
+        legend=dict(title=None),
+        template="simple_white",
+    )
+
+    fig.show()
