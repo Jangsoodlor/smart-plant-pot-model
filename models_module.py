@@ -1,6 +1,7 @@
 import pandas as pd
 import plotly.graph_objects as go
 from statsmodels.tsa.statespace.sarimax import SARIMAX
+from math import floor
 
 
 class ModelManager:
@@ -139,10 +140,24 @@ class Model:
 
         return predicted, upper, lower
 
-    def get_duration(self, moisture_level) -> str:
-        """Returns either the duration based on moisture level (or the exact date and time up 2 you)"""
-        # TODO: implement
-        return "3000 days"
+    def get_duration(self, moisture_level: int) -> str:
+        """
+        Returns the duration of days (from the last day in the training data)
+        that the moisture will be at the specified level.
+        The maximum date is 7 days.
+
+        :param moisture_level: The integer of the moisture level you want.
+        :return: The string of the number of days.
+        """
+        MAX_DAY = 7
+        AMOUNT_OF_POINTS_IN_A_DAY = (60/15) * 24
+        predicted, upper, lower = self.get_prediction(AMOUNT_OF_POINTS_IN_A_DAY * MAX_DAY)
+        matches = predicted[predicted <= moisture_level]
+        if matches.empty:
+            return f"More than {MAX_DAY} days"
+        index = matches.index[0]
+        number_of_days = (index - self.__main_data.index[-1]).days
+        return f"{number_of_days} " + ("day" if number_of_days == 1 or number_of_days == 0 else "days")
 
 
 if __name__ == "__main__":
@@ -154,6 +169,8 @@ if __name__ == "__main__":
         "humidity", (2, 0, 1), (1, 0, 1, 24)
     ).build()
     prediction, upper, lower = ModelManager.get_model().fit_model().get_prediction(1240)
+
+    print(ModelManager.get_model().fit_model().get_duration(3200))
 
     fig = go.Figure()
 
