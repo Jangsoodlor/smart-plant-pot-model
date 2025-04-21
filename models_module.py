@@ -79,6 +79,7 @@ class Model:
         self.__order = builder.order
         self.__model = builder.model
         self.__timedelta = builder.timedelta
+        self.__cached_prediction = []  # [prediction, upper, lower] #TODO verify that this works
 
     def __get_exog_data(self, steps: int):
         for model in self.__exog_models:
@@ -106,6 +107,12 @@ class Model:
         return self
 
     def get_prediction(self, steps: int):
+        if len(self.__cached_prediction) == 3:
+            return (
+                self.__cached_prediction[0],
+                self.__cached_prediction[1],
+                self.__cached_prediction[2],
+            )
         if self.__model is None:
             raise AttributeError("The model is not fitted yet")
         self.__get_exog_data(steps)
@@ -128,8 +135,14 @@ class Model:
         print(predicted)
         print("date range: ", forecast_index)
 
+        self.__cached_prediction = [predicted, upper, lower]
+
         return predicted, upper, lower
 
+    def get_duration(self) -> str:
+        """Returns either the duration (or the exact date and time up 2 you)"""
+        # TODO: implement
+        return "3000 days"
 
 if __name__ == "__main__":
     df = pd.read_csv("dataset.csv", index_col="ts", parse_dates=True)
