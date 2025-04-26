@@ -109,6 +109,7 @@ class Model:
 
     def get_prediction(self, steps: int):
         if len(self.__cached_prediction) == 3:
+            print("Reusing the cached")
             return (
                 self.__cached_prediction[0],
                 self.__cached_prediction[1],
@@ -150,7 +151,7 @@ class Model:
         :return: The string of the number of days.
         """
         MAX_DAY = 7
-        AMOUNT_OF_POINTS_IN_A_DAY = (60/15) * 24
+        AMOUNT_OF_POINTS_IN_A_DAY = 1 # (60/15) * 24
         predicted, upper, lower = self.get_prediction(AMOUNT_OF_POINTS_IN_A_DAY * MAX_DAY)
         matches = predicted[predicted <= moisture_level]
         if matches.empty:
@@ -162,13 +163,14 @@ class Model:
 
 if __name__ == "__main__":
     df = pd.read_csv("dataset.csv", index_col="ts", parse_dates=True)
+    daily_df = df.resample('D').mean()
     builder = ModelBuilder()
-    builder.add_basic_init(df, "soil_moisture", (2, 0, 1), pd.Timedelta(minutes=15))
+    builder.add_basic_init(daily_df, "soil_moisture", (2, 0, 1), pd.Timedelta(days=1))
 
     builder.add_exog("temperature", (2, 0, 1), (1, 0, 1, 24)).add_exog(
         "humidity", (2, 0, 1), (1, 0, 1, 24)
     ).build()
-    prediction, upper, lower = ModelManager.get_model().fit_model().get_prediction(1240)
+    prediction, upper, lower = ModelManager.get_model().fit_model().get_prediction(7)
 
     print(ModelManager.get_model().fit_model().get_duration(3200))
 
@@ -176,7 +178,7 @@ if __name__ == "__main__":
 
     # Line for actual data
     fig.add_trace(
-        go.Scatter(x=df.index, y=df["soil_moisture"], mode="lines", name="data")
+        go.Scatter(x=daily_df.index, y=daily_df["soil_moisture"], mode="lines", name="data")
     )
 
     # Line for predicted data
